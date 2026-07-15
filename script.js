@@ -261,7 +261,7 @@ class DodgeMechanic {
     constructor(btnElement) {
         this.btn = btnElement;
         this.playfield = document.getElementById('main-card'); // stays inside the card = always visible
-        this.threshold = 120;   // px: cursor gets this close -> glide away
+        this.hitMargin = 12;    // px: only flee when the cursor is basically on the button (small margin)
         this.step = 150;        // px: gentle move distance (no big teleports)
         this.pad = 8;           // keep fully inside the card
         this.placed = false;
@@ -298,12 +298,15 @@ class DodgeMechanic {
         };
     }
 
+    // True only when the cursor is over the button's box, grown by a small margin.
+    over(cx, cy, m) {
+        const r = this.rect();
+        return cx >= r.left - m && cx <= r.right + m && cy >= r.top - m && cy <= r.bottom + m;
+    }
+
     onMove(e) {
         if (!document.body.contains(this.btn)) { this.destroy(); return; }
-        const r = this.rect();
-        const bcx = r.left + r.width / 2;
-        const bcy = r.top + r.height / 2;
-        if (Math.hypot(e.clientX - bcx, e.clientY - bcy) < this.threshold) {
+        if (this.over(e.clientX, e.clientY, this.hitMargin)) {
             this.flee(e.clientX, e.clientY);
         }
     }
@@ -324,10 +327,11 @@ class DodgeMechanic {
         let nx = clamp(r.left + Math.cos(ang) * this.step, b.minX, b.maxX);
         let ny = clamp(r.top + Math.sin(ang) * this.step, b.minY, b.maxY);
 
-        // If cornered (still too close after clamping), slide to whichever card corner
-        // is farthest from the cursor — a smooth move that keeps it fully visible.
-        const stillClose = Math.hypot((nx + b.w / 2) - cx, (ny + b.h / 2) - cy) < this.threshold;
-        if (stillClose) {
+        // If the cursor would still be over the button after moving (cornered), slide to
+        // whichever card corner is farthest from the cursor — smooth and stays visible.
+        const stillOver = cx >= nx - this.hitMargin && cx <= nx + b.w + this.hitMargin &&
+                          cy >= ny - this.hitMargin && cy <= ny + b.h + this.hitMargin;
+        if (stillOver) {
             const corners = [
                 [b.minX, b.minY], [b.maxX, b.minY],
                 [b.minX, b.maxY], [b.maxX, b.maxY]
