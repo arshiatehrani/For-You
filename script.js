@@ -763,10 +763,17 @@ class UIController {
         dateInput.addEventListener('input', syncDateHint);
         timeSelect.addEventListener('change', syncTimeHint);
 
-        // Open the calendar when clicking anywhere in the box (not just the icon),
-        // so it behaves like the time dropdown. showPicker() needs a user gesture (the click).
+        // Open the calendar when clicking anywhere in the box (like the time dropdown).
+        // On a mouse, prevent the default so no date segment gets selected/highlighted;
+        // touch/pen keep their native tap behavior (mobile pickers open fine on their own).
+        dateInput.addEventListener('pointerdown', (e) => {
+            if (e.pointerType === 'mouse') {
+                e.preventDefault();
+                try { dateInput.showPicker(); } catch (_) { /* older browsers: icon still works */ }
+            }
+        });
         dateInput.addEventListener('click', () => {
-            try { dateInput.showPicker(); } catch (e) { /* older browsers: the icon still works */ }
+            try { dateInput.showPicker(); } catch (_) { /* already open or unsupported */ }
         });
 
         // Restore previous choices when arriving via Back, then filter — filterTimes()

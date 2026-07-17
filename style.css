@@ -421,7 +421,18 @@ button:active {
     display: none;
 }
 .date-field.empty .date-hint { display: block; }
-/* hide Chrome's native mm/dd/yyyy text while empty so it doesn't overlap the hint */
+
+/* The native date field renders its own "yyyy/mm/dd" segments and a text-selection
+   highlight. We draw our own hint + open the picker on click, so suppress all of that
+   consistently (Chrome, Safari, Firefox, iOS, Android). */
+input[type="date"] {
+    -webkit-user-select: none;
+    user-select: none;
+    caret-color: transparent;          /* no blinking caret in the segments */
+}
+input[type="date"]::selection { background: transparent; }
+/* While empty, hide the placeholder segments entirely so nothing shows behind our hint */
+.date-field.empty input[type="date"] { color: transparent; }
 .date-field.empty input[type="date"]::-webkit-datetime-edit { color: transparent; }
 
 .custom-input, .custom-select {
