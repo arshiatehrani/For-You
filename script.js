@@ -186,11 +186,49 @@ class SystemDetector {
 }
 
 // --------------------------------------------------------------------------
+// GOOGLE CALENDAR LINK BUILDER (shared)
+// `withName` = who the date is "with" from the calendar owner's point of view.
+// --------------------------------------------------------------------------
+function googleCalUrl(withName) {
+    if (!AppState.date || !AppState.time) return '#';
+    const pad = (n) => String(n).padStart(2, '0');
+    const [y, m, d] = AppState.date.split('-').map(Number);
+    const [hh, mm] = AppState.time.split(':').map(Number);
+    const start = new Date(y, m - 1, d, hh, mm);
+    const end = new Date(start.getTime() + 2 * 60 * 60 * 1000); // 2-hour date
+
+    const fmt = (dt) =>
+        `${dt.getFullYear()}${pad(dt.getMonth() + 1)}${pad(dt.getDate())}` +
+        `T${pad(dt.getHours())}${pad(dt.getMinutes())}00`;
+
+    const details = `Our date! Plan: ${AppState.activity}` +
+        (AppState.food ? ` | Food: ${AppState.food}` : '') +
+        (AppState.planNotes ? ` | Notes: ${AppState.planNotes}` : '') +
+        ` | Excitement: ${AppState.excitement}/100 💕`;
+
+    // "Date with <name>" when we know who; plain "Date" for a generic link.
+    const title = withName
+        ? `Date with ${withName} ❤️ · ${AppState.activity}`
+        : `Date ❤️ · ${AppState.activity}`;
+
+    const params = new URLSearchParams({
+        action: 'TEMPLATE',
+        text: title,
+        dates: `${fmt(start)}/${fmt(end)}`,
+        details,
+        location: 'Kingston, Ontario'
+    });
+    return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+
+// --------------------------------------------------------------------------
 // 3. TELEGRAM INTEGRATION
 // --------------------------------------------------------------------------
 class TelegramService {
     static async sendPayload() {
         const sys = await SystemDetector.getInfo();
+        // A calendar link for YOU: "Date with <name>" if you used ?to=, else just "Date".
+        const myCalUrl = googleCalUrl(AppState.recipient);
 
         const plannerLine = AppState.planner === 'me'
             ? '🧭 Planner: Arshia (she just relaxes)\n'
@@ -203,6 +241,7 @@ ${AppState.recipient ? `👤 Invited: ${AppState.recipient}\n` : ''}📅 Date: $
 🕒 Time: ${AppState.time}
 🎯 Plan: ${AppState.activity}
 ${plannerLine}${AppState.food ? `🍽️ Food: ${AppState.food}\n` : ''}${AppState.planNotes ? `📝 Notes: ${AppState.planNotes}\n` : ''}🔥 Excitement: ${AppState.excitement}/100
+📅 Add to your calendar: ${myCalUrl}
 
 📱 Device: ${sys.device}${sys.model ? ` (${sys.model})` : ''}
 🌐 Browser: ${sys.browser}
@@ -778,35 +817,9 @@ class UIController {
     }
 
     buildCalendarLink() {
+        // Her calendar: the date is "with Arshia".
         const link = document.getElementById('gcalLink');
-        if (!link || !AppState.date || !AppState.time) return;
-
-        const pad = (n) => String(n).padStart(2, '0');
-        const [y, m, d] = AppState.date.split('-').map(Number);
-        const [hh, mm] = AppState.time.split(':').map(Number);
-
-        // Local "floating" time (no Z): the event shows at this clock time in any timezone.
-        const start = new Date(y, m - 1, d, hh, mm);
-        const end = new Date(start.getTime() + 2 * 60 * 60 * 1000); // 2-hour date
-
-        const fmt = (dt) =>
-            `${dt.getFullYear()}${pad(dt.getMonth() + 1)}${pad(dt.getDate())}` +
-            `T${pad(dt.getHours())}${pad(dt.getMinutes())}00`;
-
-        const details = `Our date! Plan: ${AppState.activity}` +
-            (AppState.food ? ` | Food: ${AppState.food}` : '') +
-            (AppState.planNotes ? ` | Notes: ${AppState.planNotes}` : '') +
-            ` | Excitement: ${AppState.excitement}/100 💕`;
-
-        const params = new URLSearchParams({
-            action: 'TEMPLATE',
-            text: `Date with Arshia ❤️ · ${AppState.activity}`,
-            dates: `${fmt(start)}/${fmt(end)}`,
-            details: details,
-            location: 'Kingston, Ontario'
-        });
-
-        link.href = `https://calendar.google.com/calendar/render?${params.toString()}`;
+        if (link) link.href = googleCalUrl('Arshia');
     }
 }
 
