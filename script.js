@@ -206,16 +206,33 @@ function calendarFields(withName) {
         (AppState.planNotes ? ` | Notes: ${AppState.planNotes}` : '') +
         ` | Excitement: ${AppState.excitement}/100 💕`;
 
-    // Local "floating" clock time, e.g. 2026-07-25T20:30:00 (Google Calendar API format).
-    const localDT = (dt) =>
+    // The picked clock time is meant in the date's timezone (Kingston = America/Toronto).
+    const TZ = 'America/Toronto';
+    // Toronto's UTC offset (e.g. "-04:00") for that wall-clock moment (handles DST).
+    const offsetStr = (wall) => {
+        const approx = new Date(Date.UTC(wall.getFullYear(), wall.getMonth(), wall.getDate(), wall.getHours(), wall.getMinutes()));
+        const dtf = new Intl.DateTimeFormat('en-US', {
+            timeZone: TZ, hour12: false, year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', second: '2-digit'
+        });
+        const q = {};
+        for (const part of dtf.formatToParts(approx)) q[part.type] = part.value;
+        const asUTC = Date.UTC(+q.year, +q.month - 1, +q.day, +q.hour, +q.minute, +q.second);
+        let off = Math.round((asUTC - approx.getTime()) / 60000); // minutes, negative = west
+        const sign = off <= 0 ? '-' : '+';
+        off = Math.abs(off);
+        return `${sign}${pad(Math.floor(off / 60))}:${pad(off % 60)}`;
+    };
+    // RFC3339 with offset, e.g. 2026-07-25T20:30:00-04:00 (absolute — for the Calendar API + free/busy).
+    const rfc = (dt) =>
         `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}` +
-        `T${pad(dt.getHours())}:${pad(dt.getMinutes())}:00`;
-    // Compact form for the render URL, e.g. 20260725T203000.
+        `T${pad(dt.getHours())}:${pad(dt.getMinutes())}:00${offsetStr(dt)}`;
+    // Compact "floating" form for the render URL, e.g. 20260725T203000.
     const compact = (dt) =>
         `${dt.getFullYear()}${pad(dt.getMonth() + 1)}${pad(dt.getDate())}` +
         `T${pad(dt.getHours())}${pad(dt.getMinutes())}00`;
 
-    return { start, end, title, details, location: 'Kingston, Ontario', localDT, compact };
+    return { start, end, title, details, location: 'Kingston, Ontario', rfc, compact };
 }
 
 function googleCalUrl(withName) {
@@ -271,26 +288,24 @@ ${plannerLine}${AppState.food ? `🍽️ Food: ${AppState.food}\n` : ''}${AppSta
 
         const workerURL = "https://date-night-arshia.arshia-tehrani1380.workers.dev/";
 
-        // Event fields for YOUR calendar — the Worker uses these to auto-create the event.
+        // Event fields for YOUR calendar — the Worker checks availability, then creates it.
         const f = calendarFields(AppState.recipient);
         const query = new URLSearchParams({
             text: message,
             evTitle: f.title,
-            evStart: f.localDT(f.start),
-            evEnd: f.localDT(f.end),
+            evStart: f.rfc(f.start),
+            evEnd: f.rfc(f.end),
             evDesc: f.details,
             evLoc: f.location
         });
 
+        // Normal (CORS) fetch so we can READ the result — the Worker sets Access-Control-Allow-Origin: *.
         try {
-            await fetch(`${workerURL}?${query.toString()}`, {
-                method: 'GET',
-                mode: 'no-cors'
-            });
-            return true;
+            const resp = await fetch(`${workerURL}?${query.toString()}`, { method: 'GET' });
+            return await resp.json().catch(() => ({ conflict: false }));
         } catch (error) {
             console.error("Transmission failed:", error);
-            return true; // Proceed anyway for UX
+            return { conflict: false }; // fail-open: don't block on a network hiccup
         }
     }
 }
@@ -809,12 +824,20 @@ class UIController {
         slider.addEventListener('input', (e) => render(parseInt(e.target.value)));
 
         btnFinish.addEventListener('click', async () => {
-            this.stack = [];                 // no going back once we're sending
-            this.renderView('tpl-loading');  // transient, not a history step
-            await TelegramService.sendPayload();
+            this.backBtn.style.display = 'none'; // hide Back during the send (don't clear history)
+            this.renderView('tpl-loading');      // transient, not a history step
+            const result = await TelegramService.sendPayload();
+
+            if (result && result.conflict) {
+                // Arshia is busy then — don't finalize; send her back to pick another time.
+                this.back(); // top of the stack is the date/time step
+                alert("💔 Aw — Arshia isn't free at that time. Please pick another date or time!");
+                return;
+            }
+
             setTimeout(() => {
                 this.show('tpl-final', this.bindFinalEvents.bind(this), { reset: true }); // no Back from the end
-            }, 1200);
+            }, 1000);
         });
     }
 

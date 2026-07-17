@@ -201,6 +201,12 @@ When enabled, the Worker creates the date on **your** Google Calendar automatica
 moment she submits (in addition to Telegram) — no taps from anyone. It's optional: if the
 Google secrets below aren't set, the Worker just skips this step.
 
+**Availability check:** before creating the event, the Worker runs a free/busy check on
+your calendar for that time window. If you already have a conflicting event, it does *not*
+create the event or send the Telegram — instead it returns `{ conflict: true }` and the
+page asks her to pick another time. (The check fails *open*: if it errors, the date still
+goes through, so a hiccup never wrongly blocks you.)
+
 Set these extra secrets on the Worker (Settings → Variables and Secrets), then paste the
 latest [`worker.js`](worker.js) and Deploy:
 
