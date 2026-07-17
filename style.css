@@ -44,7 +44,10 @@
     --transition-bounce: 0.6s cubic-bezier(0.68, -0.55, 0.26, 1.55);
     
     /* Typography */
-    --font-family: 'Avenir Next', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    /* Typography — matched to the portfolio */
+    --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-display: 'Playfair Display', 'Inter', serif;   /* elegant serif headings */
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace; /* small eyebrow labels */
 }
 
 /* ==========================================================================
@@ -188,13 +191,14 @@ body, html {
 /* ==========================================================================
    TYPOGRAPHY
    ========================================================================== */
-h1 {
+h1, h2 {
+    font-family: var(--font-display);
     color: var(--pink-600);
-    font-size: 28px;
+    font-size: 30px;
     margin-bottom: 8px;
-    font-weight: 800;
-    line-height: 1.3;
-    letter-spacing: -0.5px;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -0.02em;
 }
 
 .subtitle {
@@ -223,7 +227,7 @@ button {
     outline: none;
     border: none;
     cursor: pointer;
-    font-weight: 700;
+    font-weight: 600;
     font-size: 16px;
     border-radius: 50px;
     transition: var(--transition-bounce);
@@ -231,7 +235,7 @@ button {
     justify-content: center;
     align-items: center;
     user-select: none;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.01em;
 }
 
 button:active {
@@ -243,6 +247,24 @@ button:active {
     color: white;
     padding: 16px 35px;
     box-shadow: 0 6px 20px rgba(255, 71, 126, 0.35);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Portfolio-style shimmer sweep on hover */
+.btn-primary::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+    transition: left 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.btn-primary:hover::after {
+    left: 100%;
 }
 
 .btn-primary:hover {
@@ -376,8 +398,11 @@ button:active {
 .form-group label {
     display: block;
     margin-bottom: 10px;
-    font-size: 14px;
-    font-weight: 700;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
     color: var(--pink-700);
     padding-left: 8px;
 }
@@ -624,9 +649,12 @@ button:active {
 .slider-labels {
     display: flex;
     justify-content: space-between;
-    font-size: 13px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
     color: var(--text-muted);
-    font-weight: 700;
+    font-weight: 500;
 }
 
 /* ==========================================================================
