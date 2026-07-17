@@ -748,6 +748,12 @@ class UIController {
         dateInput.addEventListener('input', syncDateHint);
         timeSelect.addEventListener('change', syncTimeHint);
 
+        // Open the calendar when clicking anywhere in the box (not just the icon),
+        // so it behaves like the time dropdown. showPicker() needs a user gesture (the click).
+        dateInput.addEventListener('click', () => {
+            try { dateInput.showPicker(); } catch (e) { /* older browsers: the icon still works */ }
+        });
+
         // Restore previous choices when arriving via Back, then filter — filterTimes()
         // resets the selection to the placeholder if that slot has since passed.
         if (AppState.date) dateInput.value = AppState.date;
