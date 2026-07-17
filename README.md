@@ -184,10 +184,10 @@ on an iPhone.)
 
 ## Personalized links & location
 
-- **Tag who you send it to** — append `?to=Name` to the link, e.g.
-  `https://<user>.github.io/<repo>/?to=Sarah`. The page then greets them by name
-  ("Sarah, will you go on a date with me?"), sets the tab title, and includes
-  **`👤 Invited: Sarah`** in your Telegram message. Without `?to=`, everything works
+- **Tag who you send it to** — append `?to=<name>` to the link, e.g.
+  `https://<user>.github.io/<repo>/?to=<name>`. The page then greets them by name
+  ("`<name>`, will you go on a date with me?"), sets the tab title, and includes
+  **`👤 Invited: <name>`** in your Telegram message. Without `?to=`, everything works
   as a generic invite. (Parsed in `parseRecipient()` in `script.js`.)
 - **Approximate location** — the Cloudflare Worker adds the visitor's approximate
   **city / region / country**, postal code, a Google Maps pin, and IP to the Telegram
@@ -231,7 +231,8 @@ One-time setup:
    *Exchange authorization code for tokens* → copy the **refresh token**.
 5. Put the three values into the Worker secrets, paste `worker.js`, Deploy.
 
-The event lands on your `primary` calendar, titled from `evTitle` (e.g. `Date with Diana ❤️`).
+The event lands on your `primary` calendar, titled from `evTitle` (e.g. `Date with <name> ❤️`,
+or just `Date ❤️` for a generic link).
 
 ## Notes
 
