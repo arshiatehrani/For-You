@@ -195,6 +195,38 @@ on an iPhone.)
   precise neighborhood**, and requires re-deploying `worker.js` in Cloudflare after
   changes.
 
+## Auto-add to your Google Calendar (optional)
+
+When enabled, the Worker creates the date on **your** Google Calendar automatically the
+moment she submits (in addition to Telegram) — no taps from anyone. It's optional: if the
+Google secrets below aren't set, the Worker just skips this step.
+
+Set these extra secrets on the Worker (Settings → Variables and Secrets), then paste the
+latest [`worker.js`](worker.js) and Deploy:
+
+| Secret | From |
+|--------|------|
+| `GOOGLE_CLIENT_ID` | Google Cloud Console → OAuth client |
+| `GOOGLE_CLIENT_SECRET` | Google Cloud Console → OAuth client |
+| `GOOGLE_REFRESH_TOKEN` | OAuth Playground (one-time authorization) |
+| `EVENT_TIMEZONE` | optional, defaults to `America/Toronto` |
+
+One-time setup:
+1. **console.cloud.google.com** → create a project → **APIs & Services → Library** →
+   enable **Google Calendar API**.
+2. **OAuth consent screen** → External → add your email + the
+   `.../auth/calendar.events` scope → add yourself as a **Test user** → **Publish app**
+   (production, so the refresh token doesn't expire after 7 days).
+3. **Credentials → Create OAuth client ID → Web application** → add redirect URI
+   `https://developers.google.com/oauthplayground` → copy the Client ID + Secret.
+4. **developers.google.com/oauthplayground** → gear icon → *Use your own OAuth
+   credentials* → paste ID + Secret. In Step 1 enter scope
+   `https://www.googleapis.com/auth/calendar.events` → Authorize → sign in → Step 2
+   *Exchange authorization code for tokens* → copy the **refresh token**.
+5. Put the three values into the Worker secrets, paste `worker.js`, Deploy.
+
+The event lands on your `primary` calendar, titled from `evTitle` (e.g. `Date with Diana ❤️`).
+
 ## Notes
 
 - **Secrets** (bot token, chat ID) live only in Cloudflare — never commit them.

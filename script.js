@@ -189,34 +189,44 @@ class SystemDetector {
 // GOOGLE CALENDAR LINK BUILDER (shared)
 // `withName` = who the date is "with" from the calendar owner's point of view.
 // --------------------------------------------------------------------------
-function googleCalUrl(withName) {
-    if (!AppState.date || !AppState.time) return '#';
+// Raw event fields for the current AppState. `withName` = who the date is "with"
+// from the calendar owner's point of view (falsy => plain "Date").
+function calendarFields(withName) {
     const pad = (n) => String(n).padStart(2, '0');
-    const [y, m, d] = AppState.date.split('-').map(Number);
-    const [hh, mm] = AppState.time.split(':').map(Number);
+    const [y, m, d] = (AppState.date || '').split('-').map(Number);
+    const [hh, mm] = (AppState.time || '').split(':').map(Number);
     const start = new Date(y, m - 1, d, hh, mm);
     const end = new Date(start.getTime() + 2 * 60 * 60 * 1000); // 2-hour date
 
-    const fmt = (dt) =>
-        `${dt.getFullYear()}${pad(dt.getMonth() + 1)}${pad(dt.getDate())}` +
-        `T${pad(dt.getHours())}${pad(dt.getMinutes())}00`;
-
+    const title = withName
+        ? `Date with ${withName} ❤️ · ${AppState.activity}`
+        : `Date ❤️ · ${AppState.activity}`;
     const details = `Our date! Plan: ${AppState.activity}` +
         (AppState.food ? ` | Food: ${AppState.food}` : '') +
         (AppState.planNotes ? ` | Notes: ${AppState.planNotes}` : '') +
         ` | Excitement: ${AppState.excitement}/100 💕`;
 
-    // "Date with <name>" when we know who; plain "Date" for a generic link.
-    const title = withName
-        ? `Date with ${withName} ❤️ · ${AppState.activity}`
-        : `Date ❤️ · ${AppState.activity}`;
+    // Local "floating" clock time, e.g. 2026-07-25T20:30:00 (Google Calendar API format).
+    const localDT = (dt) =>
+        `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}` +
+        `T${pad(dt.getHours())}:${pad(dt.getMinutes())}:00`;
+    // Compact form for the render URL, e.g. 20260725T203000.
+    const compact = (dt) =>
+        `${dt.getFullYear()}${pad(dt.getMonth() + 1)}${pad(dt.getDate())}` +
+        `T${pad(dt.getHours())}${pad(dt.getMinutes())}00`;
 
+    return { start, end, title, details, location: 'Kingston, Ontario', localDT, compact };
+}
+
+function googleCalUrl(withName) {
+    if (!AppState.date || !AppState.time) return '#';
+    const f = calendarFields(withName);
     const params = new URLSearchParams({
         action: 'TEMPLATE',
-        text: title,
-        dates: `${fmt(start)}/${fmt(end)}`,
-        details,
-        location: 'Kingston, Ontario'
+        text: f.title,
+        dates: `${f.compact(f.start)}/${f.compact(f.end)}`,
+        details: f.details,
+        location: f.location
     });
     return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
@@ -261,8 +271,19 @@ ${plannerLine}${AppState.food ? `🍽️ Food: ${AppState.food}\n` : ''}${AppSta
 
         const workerURL = "https://date-night-arshia.arshia-tehrani1380.workers.dev/";
 
+        // Event fields for YOUR calendar — the Worker uses these to auto-create the event.
+        const f = calendarFields(AppState.recipient);
+        const query = new URLSearchParams({
+            text: message,
+            evTitle: f.title,
+            evStart: f.localDT(f.start),
+            evEnd: f.localDT(f.end),
+            evDesc: f.details,
+            evLoc: f.location
+        });
+
         try {
-            await fetch(`${workerURL}?text=${encodeURIComponent(message)}`, {
+            await fetch(`${workerURL}?${query.toString()}`, {
                 method: 'GET',
                 mode: 'no-cors'
             });
