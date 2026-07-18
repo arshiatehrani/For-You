@@ -13,8 +13,9 @@ calendars and greys out the times you're busy.
 
 ## Features
 
-- **Playful invite** — a "NO" button that dodges the cursor (with cute teasing lines after
-  repeated tries), and a YES that advances.
+- **Playful invite** — a "NO" button that dodges the cursor, with ~220 cute teasing lines
+  (an escalating narrative, some of them time-of-day aware) after repeated tries. Once she
+  taps **YES it's final** — Back won't return to it (a flirty "no take-backs" toast instead).
 - **15 date ideas** + two "who plans it" modes; editable details with preset "vibes."
 - **Two-step food** (cuisine → dish) when Dinner is picked.
 - **Smart scheduling** — greys out times you're busy across *every* calendar you have,
