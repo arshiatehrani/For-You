@@ -75,9 +75,10 @@ export default {
     const authHeaders = { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" };
 
     // --- 1) Availability check across ALL calendars ---
+    // free/busy catches normal Google calendars; events.list ALSO catches imported /
+    // subscribed (Outlook) calendars, which free/busy reports as empty.
     if (canCal && accessToken) {
       try {
-        // Enumerate every calendar we can at least read free/busy for.
         let items = [{ id: "primary" }];
         try {
           const cl = await fetch(
@@ -89,21 +90,61 @@ export default {
           if (Array.isArray(clj.items) && clj.items.length) items = clj.items.map((c) => ({ id: c.id }));
         } catch (e) { /* fall back to primary only */ }
 
-        const fb = await fetch("https://www.googleapis.com/calendar/v3/freeBusy", {
-          method: "POST",
-          headers: authHeaders,
-          body: JSON.stringify({ timeMin: evStart, timeMax: evEnd, items })
-        });
-        const fbj = await fb.json();
-        if (fbj.error) { try { await tgSend(`⚠️ Free/busy error (calendar not checked): ${JSON.stringify(fbj.error).slice(0, 300)}`); } catch (e) {} }
+        const startMs = Date.parse(evStart);
+        const endMs = Date.parse(evEnd);
 
-        const cals = fbj.calendars || {};
-        let busy = false;
-        for (const id in cals) {
-          const b = cals[id] && cals[id].busy;
-          if (Array.isArray(b) && b.length > 0) { busy = true; break; }
+        // (a) free/busy across all calendars
+        let fbBusy = false, fbj = null;
+        try {
+          const fb = await fetch("https://www.googleapis.com/calendar/v3/freeBusy", {
+            method: "POST", headers: authHeaders,
+            body: JSON.stringify({ timeMin: evStart, timeMax: evEnd, items })
+          });
+          fbj = await fb.json();
+          const cals = (fbj && fbj.calendars) || {};
+          for (const id in cals) {
+            const b = cals[id] && cals[id].busy;
+            if (Array.isArray(b) && b.length > 0) { fbBusy = true; break; }
+          }
+        } catch (e) {}
+
+        // (b) events.list per calendar (parallel) — a timed, non-cancelled, non-"free",
+        //     non-declined event that overlaps counts as busy. All-day items (holidays /
+        //     birthdays) are ignored. This is what catches the imported Outlook calendars.
+        const blocks = (ev) => {
+          if (ev.status === "cancelled") return false;
+          if (ev.transparency === "transparent") return false;   // explicitly marked "Free"
+          if (!ev.start || !ev.start.dateTime) return false;      // all-day event
+          if (Array.isArray(ev.attendees)) {
+            const me = ev.attendees.find((a) => a.self);
+            if (me && me.responseStatus === "declined") return false;
+          }
+          const s = Date.parse(ev.start.dateTime);
+          const e = Date.parse((ev.end && ev.end.dateTime) || ev.start.dateTime);
+          return s < endMs && e > startMs; // overlaps the proposed window
+        };
+        const perCal = await Promise.all(items.map(async (it) => {
+          try {
+            const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(it.id)}/events` +
+              `?singleEvents=true&maxResults=50&timeMin=${encodeURIComponent(evStart)}&timeMax=${encodeURIComponent(evEnd)}`;
+            const r = await fetch(url, { headers: authHeaders });
+            if (!r.ok) return { id: it.id, ok: false, busy: false, events: [] };
+            const j = await r.json();
+            const evs = Array.isArray(j.items) ? j.items : [];
+            return {
+              id: it.id, ok: true, busy: evs.some(blocks),
+              events: evs.map((e) => ({ summary: e.summary, transparency: e.transparency, status: e.status, start: e.start && (e.start.dateTime || e.start.date) }))
+            };
+          } catch (e) { return { id: it.id, ok: false, busy: false, events: [] }; }
+        }));
+        const eventsBusy = perCal.some((c) => c.busy);
+
+        // Debug (only with ?debug=1) — inspect calendars + what each returned.
+        if (p.get("debug") === "1") {
+          return json({ debug: true, queried: items, fbBusy, eventsBusy, freebusy: fbj, perCal });
         }
-        if (busy) {
+
+        if (fbBusy || eventsBusy) {
           return json({ conflict: true, telegramOk: false, calendarOk: false });
         }
       } catch (e) { /* fail-open on network/parse errors */ }
