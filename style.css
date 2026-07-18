@@ -414,6 +414,32 @@ button:active {
     transform: translateX(-2px);
 }
 
+/* Toast pill (e.g. "no take-backs" when she tries to leave after saying yes) */
+.date-toast {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-10px);
+    max-width: 88%;
+    padding: 10px 18px;
+    border-radius: 50px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.35;
+    text-align: center;
+    box-shadow: var(--shadow-hover);
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.date-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
 /* ==========================================================================
    FORM ELEMENTS
    ========================================================================== */

@@ -318,6 +318,17 @@ const NO_TEASES = [
     "Come on, cutie — let's go be a 'yes' together. ✨"
 ];
 
+// Shown if she tries to go Back to the YES/NO screen — that "yes" is final. 💕
+const NO_BACK_MESSAGES = [
+    "Nope — you already said YES, and there's no take-backs. 😌💕",
+    "Sorry cutie, that YES is legally binding now. 📜❤️",
+    "No going back! You're officially stuck on a date with me. 😘",
+    "That door locked the moment you said yes. Onward! 🔒💘",
+    "A yes is a yes 💍 — no escaping this date now.",
+    "Once you're in, you're in. Lucky me. 🥰",
+    "Can't undo a yes, sweetheart. Let's keep planning. ✨"
+];
+
 // --------------------------------------------------------------------------
 // 2. SYSTEM INFO DETECTOR
 // --------------------------------------------------------------------------
@@ -821,15 +832,38 @@ class UIController {
         this.renderView(templateId, binder);
     }
 
-    // Navigate back to the previous step.
+    // Navigate back to the previous step — but the YES/NO screen is a one-way door.
     back() {
         if (!this.stack.length) return;
+        const prev = this.stack[this.stack.length - 1];
+        if (prev.templateId === 'tpl-invite') {
+            // She said yes — no take-backs. Tease her instead of navigating.
+            this._noBackIdx = (this._noBackIdx || 0);
+            this.showToast(NO_BACK_MESSAGES[this._noBackIdx % NO_BACK_MESSAGES.length]);
+            this._noBackIdx++;
+            return;
+        }
         this.currentStep = this.stack.pop();
         this.renderView(this.currentStep.templateId, this.currentStep.binder);
     }
 
     updateBackButton() {
         this.backBtn.style.display = this.stack.length ? 'flex' : 'none';
+    }
+
+    // A little pink toast pill near the top of the card.
+    showToast(msg) {
+        let t = document.getElementById('dateToast');
+        if (!t) {
+            t = document.createElement('div');
+            t.id = 'dateToast';
+            t.className = 'date-toast';
+            document.getElementById('main-card').appendChild(t);
+        }
+        t.textContent = msg;
+        clearTimeout(this._toastTimer);
+        requestAnimationFrame(() => t.classList.add('show'));
+        this._toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
     }
 
     // --- View 1: Invite -----------------------------------------------------
