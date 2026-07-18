@@ -106,13 +106,15 @@ export default {
             if (!isBusyEvent(ev)) continue;
             const s = Date.parse(ev.start.dateTime);
             let e = Date.parse((ev.end && ev.end.dateTime) || ev.start.dateTime);
-            if (!(e > s)) e = s + 60000; // zero-duration deadline -> 1-min block
+            if (!isFinite(e) || e < s) e = s; // deadline / no end -> the buffer below gives it width
             if (isFinite(s)) out.push({ start: s, end: e });
           }
         } catch (e) {}
       }));
 
-      return out;
+      // Busy from 2 hours BEFORE each event's start until its end — free right after it ends.
+      const BUFFER_MS = 2 * 60 * 60 * 1000;
+      return out.map((iv) => ({ start: iv.start - BUFFER_MS, end: iv.end }));
     };
 
     // ===== Mode 1: availability (for greying out busy slots on the page) =====

@@ -212,6 +212,9 @@ wrongly blocks a real date.
 `?availability=1&dayStart=…&dayEnd=…` endpoint (returns `{ busy: [{start,end}] }`) and
 **greys out the time slots you're not free**, so she rarely hits a conflict at all.
 
+**Busy buffer:** each event marks you busy from **2 hours before its start** through its
+**end** (you're free the moment it ends). Tune `BUFFER_MS` in `collectBusy` in `worker.js`.
+
 **Extras:** the final screen shows a live countdown to the date, a weather forecast for the
 day (free Open-Meteo API, when within range), and a "find spots in Kingston" maps link.
 She can also leave a short note that comes through in your Telegram + the calendar event.
