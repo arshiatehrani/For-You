@@ -42,6 +42,7 @@
     /* Transitions */
     --transition-fast: 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     --transition-bounce: 0.6s cubic-bezier(0.68, -0.55, 0.26, 1.55);
+    --transition-hover: 0.08s ease-out;   /* snappy hover lift, matched to the portfolio */
     
     /* Typography */
     /* Typography — matched to the portfolio */
@@ -230,7 +231,7 @@ button {
     font-weight: 600;
     font-size: 16px;
     border-radius: 50px;
-    transition: var(--transition-bounce);
+    transition: var(--transition-hover);
     display: inline-flex;
     justify-content: center;
     align-items: center;
@@ -329,7 +330,7 @@ button:active {
     font-weight: 700;
     font-size: 16px;
     width: 100%;
-    transition: var(--transition-bounce);
+    transition: var(--transition-hover);
     box-shadow: 0 6px 20px rgba(0, 136, 204, 0.35);
 }
 
@@ -351,7 +352,7 @@ button:active {
     font-weight: 700;
     font-size: 16px;
     width: 100%;
-    transition: var(--transition-bounce);
+    transition: var(--transition-hover);
     box-shadow: 0 6px 20px rgba(52, 168, 83, 0.35);
 }
 
@@ -509,7 +510,7 @@ input[type="date"]::selection { background: transparent; }
     justify-content: center;
     align-items: center;
     gap: 6px;
-    transition: var(--transition-bounce);
+    transition: var(--transition-hover);
     box-shadow: 0 4px 10px rgba(0,0,0,0.03);
 }
 
