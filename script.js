@@ -185,6 +185,15 @@ class SystemDetector {
     }
 }
 
+// Format a 24-hour "HH:MM" string as friendly 12-hour "h:MM AM/PM" for display.
+function fmtTime12(t) {
+    if (!t) return t;
+    const [h, m] = t.split(':').map(Number);
+    const ampm = h < 12 ? 'AM' : 'PM';
+    const hr = (h % 12) || 12;
+    return `${hr}:${String(m).padStart(2, '0')} ${ampm}`;
+}
+
 // --------------------------------------------------------------------------
 // GOOGLE CALENDAR LINK BUILDER (shared)
 // `withName` = who the date is "with" from the calendar owner's point of view.
@@ -265,7 +274,7 @@ class TelegramService {
 
         const message = `❤️ New Date Accepted ❤️
 ${AppState.recipient ? `👤 Invited: ${AppState.recipient}\n` : ''}📅 Date: ${AppState.date}
-🕒 Time: ${AppState.time}
+🕒 Time: ${fmtTime12(AppState.time)}
 🎯 Plan: ${AppState.activity}
 ${plannerLine}${AppState.food ? `🍽️ Food: ${AppState.food}\n` : ''}${AppState.planNotes ? `📝 Notes: ${AppState.planNotes}\n` : ''}🔥 Excitement: ${AppState.excitement}/100
 📅 Add to your calendar: ${myCalUrl}
@@ -733,12 +742,13 @@ class UIController {
         // Block past dates in the picker itself.
         dateInput.min = todayStr;
 
-        // Build the full day 00:00–23:30 (30-min steps) once.
+        // Build the full day (30-min steps) once. Value stays 24-hour ("21:00") for the
+        // logic; the visible label is friendly 12-hour AM/PM ("9:00 PM") to avoid confusion.
         while (timeSelect.options.length > 1) timeSelect.remove(1);
         for (let h = 0; h <= 23; h++) {
             const hs = pad(h);
-            timeSelect.add(new Option(`${hs}:00`, `${hs}:00`));
-            timeSelect.add(new Option(`${hs}:30`, `${hs}:30`));
+            timeSelect.add(new Option(fmtTime12(`${hs}:00`), `${hs}:00`));
+            timeSelect.add(new Option(fmtTime12(`${hs}:30`), `${hs}:30`));
         }
 
         const toMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
@@ -851,7 +861,7 @@ class UIController {
     // --- View 7: Final ------------------------------------------------------
     bindFinalEvents() {
         document.getElementById('final-activity').innerText = AppState.activity;
-        document.getElementById('final-time').innerText = `${AppState.date} at ${AppState.time}`;
+        document.getElementById('final-time').innerText = `${AppState.date} at ${fmtTime12(AppState.time)}`;
 
         if (AppState.food) {
             document.getElementById('food-summary-row').style.display = 'flex';
