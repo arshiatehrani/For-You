@@ -6,7 +6,7 @@ send it, **you** get a Telegram message with everything, and the date is **auto-
 your Google Calendar** — but only if you're actually free: the app checks *all* your
 calendars and greys out the times you're busy.
 
-- **Live site:** `https://<YOUR_USERNAME>.github.io/<YOUR_REPO>/`
+- **Live site:** https://arshiatehrani.github.io/For-You/
 - **Stack:** plain HTML + CSS + JS (no framework, no build step) + one Cloudflare Worker
 
 ---
