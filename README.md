@@ -74,7 +74,31 @@ setup below.
 
 ## Setup — reproduce from scratch
 
+Four required steps (Telegram → Cloudflare → site → GitHub Pages) plus an optional fifth
+(Google Calendar auto-add):
+
+```mermaid
+flowchart TD
+  A[1. Telegram bot] --> B[2. Cloudflare Worker]
+  B --> C[3. Worker URL into script.js]
+  C --> D[4. GitHub Pages]
+  D --> E{Auto-add to your calendar}
+  E -->|Skip| F[Done: Telegram only]
+  E -->|Yes| G[5. Google Cloud and OAuth]
+  G --> H[6. Google secrets into the Worker]
+  H --> I[Done: availability-aware]
+```
+
 ### 1. Create a Telegram bot
+
+```mermaid
+flowchart LR
+  A[Open BotFather] --> B[Send /newbot]
+  B --> C[Copy bot token]
+  C --> D[Press Start on your bot]
+  D --> E[Message userinfobot]
+  E --> F[Copy your chat id]
+```
 
 1. In Telegram, search **`@BotFather`**, press **Start**, send `/newbot`.
 2. Give it a name, then a username ending in `bot` (e.g. `my_date_bot`).
@@ -89,6 +113,17 @@ setup below.
    If you get "hi" in Telegram, it works.
 
 ### 2. Create the Cloudflare Worker (keeps your token secret)
+
+```mermaid
+flowchart LR
+  A[Workers and Pages] --> B[Create Worker]
+  B --> C[Start with Hello World]
+  C --> D[Edit code, paste worker.js]
+  D --> E[Deploy]
+  E --> F[Settings, Variables and Secrets]
+  F --> G[Add BOT_TOKEN and CHAT_ID as secrets]
+  G --> H[Copy the Worker URL]
+```
 
 1. Go to [dash.cloudflare.com](https://dash.cloudflare.com) → **Workers & Pages** →
    **Create** → **Create Worker** → **Start with Hello World!** → name it → **Deploy**.
@@ -250,32 +285,82 @@ forecast** for the day (free Open-Meteo API, when within its ~16-day range). On 
 excitement step she can leave a short **note** that comes through in your Telegram and the
 calendar event's description.
 
-Set these extra secrets on the Worker (Settings → Variables and Secrets), then paste the
-latest [`worker.js`](worker.js) and Deploy:
+### The one-time Google setup — step by step
 
-| Secret | From |
-|--------|------|
-| `GOOGLE_CLIENT_ID` | Google Cloud Console → OAuth client |
-| `GOOGLE_CLIENT_SECRET` | Google Cloud Console → OAuth client |
-| `GOOGLE_REFRESH_TOKEN` | OAuth Playground (one-time authorization) |
-| `EVENT_TIMEZONE` | optional, defaults to `America/Toronto` |
+This is the fiddliest part; you do it once. The path below matches the **current** Google
+console (the redesigned "Google Auth Platform" with the left menu **Overview / Branding /
+Audience / Clients / Data Access**). **Verification is NOT required** for personal use —
+if you ever land on a "submit your app for verification" page, just skip it.
 
-One-time setup:
-1. **console.cloud.google.com** → create a project → **APIs & Services → Library** →
-   enable **Google Calendar API**.
-2. **OAuth consent screen** → External → add your email + the
-   `.../auth/calendar` scope → add yourself as a **Test user** → **Publish app**
-   (production, so the refresh token doesn't expire after 7 days).
-   *(The full `calendar` scope is required — it covers creating events, the free/busy
-   availability check, and listing all your calendars. The narrower `calendar.events`
-   scope cannot run free/busy.)*
-3. **Credentials → Create OAuth client ID → Web application** → add redirect URI
-   `https://developers.google.com/oauthplayground` → copy the Client ID + Secret.
-4. **developers.google.com/oauthplayground** → gear icon → *Use your own OAuth
-   credentials* → paste ID + Secret. In Step 1 enter scope
-   `https://www.googleapis.com/auth/calendar` → Authorize → sign in → Step 2
-   *Exchange authorization code for tokens* → copy the **refresh token**.
-5. Put the three values into the Worker secrets, paste `worker.js`, Deploy.
+```mermaid
+flowchart TD
+  A[Create Google Cloud project] --> B[Enable Google Calendar API]
+  B --> C[Branding: app name and emails]
+  C --> D[Audience: External, add Test user, Publish app]
+  D --> E[Data Access: add full calendar scope]
+  E --> F[Clients: Create OAuth client, Web application]
+  F --> G[Add redirect URI: oauthplayground]
+  G --> H[Copy Client ID and Client secret]
+  H --> I[OAuth Playground: use your own credentials]
+  I --> J[Authorize full calendar scope, sign in, Allow]
+  J --> K[Exchange code for refresh token]
+  K --> L[Add 3 Google secrets to Worker, redeploy]
+```
+
+**Step 1 — Project + API**
+1. Go to **console.cloud.google.com**; create a project (top-bar project dropdown → **New
+   project**), then select it.
+2. In the top search bar type **Google Calendar API**, open it, click **Enable**.
+
+**Step 2 — OAuth consent (the "Google Auth Platform" tabs)**
+Open **APIs & Services → OAuth consent screen** — it opens the new **Google Auth Platform**
+(left menu: Overview, Branding, Audience, Clients, Data Access). Fill three tabs:
+- **Branding** — app name (e.g. "Date Night"), your support email, developer email → Save.
+- **Audience** — User type **External**. Under **Test users**, add your own Gmail. Then
+  click **Publish app** so status flips *Testing → In production*.
+  ⚠️ Publishing is what stops the refresh token from **expiring after 7 days**.
+- **Data Access** — **Add or remove scopes** → filter `calendar` → tick
+  **`https://www.googleapis.com/auth/calendar`** (the FULL one) → **Update** → **Save**.
+
+> ⚠️ Use the **full `calendar`** scope, *not* `calendar.events`. The narrow events scope
+> can create events but **cannot** run the free/busy check or list your calendars —
+> that's the single most common reason the conflict-check "silently does nothing."
+
+**Step 3 — OAuth client**
+1. Left menu → **Clients** → **Create OAuth client**.
+2. **Application type: Web application**; give it any name.
+3. Under **Authorized redirect URIs** → **Add URI** → paste exactly
+   `https://developers.google.com/oauthplayground`
+4. **Create** → copy the **Client ID** and **Client secret**.
+
+**Step 4 — Get a refresh token (OAuth Playground)**
+1. Go to **developers.google.com/oauthplayground**.
+2. Click the **⚙️ gear** (top-right) → tick **Use your own OAuth credentials** → paste your
+   Client ID + Client secret → Close.
+3. In the left **"Input your own scopes"** box, enter
+   `https://www.googleapis.com/auth/calendar`
+4. **Authorize APIs** → sign in with the account whose calendar you want.
+5. You'll see **"Google hasn't verified this app"** — expected for your own app. Click
+   **Advanced → Go to (your app) (unsafe) → Continue / Allow**.
+6. Back in the Playground: **Step 2 → Exchange authorization code for tokens** → copy the
+   **Refresh token** (starts with `1//`).
+
+**Step 5 — Put the secrets in the Worker**
+1. Cloudflare → your Worker → **Settings → Variables and Secrets** → **Add variable** for
+   each (click **Encrypt**), with these **exact** names:
+
+   | Name | Value |
+   |------|-------|
+   | `GOOGLE_CLIENT_ID` | the Client ID (ends in `.apps.googleusercontent.com`) |
+   | `GOOGLE_CLIENT_SECRET` | the Client secret (starts with `GOCSPX-`) |
+   | `GOOGLE_REFRESH_TOKEN` | the refresh token (starts with `1//`) |
+   | `EVENT_TIMEZONE` | *(optional)* defaults to `America/Toronto` |
+
+2. **Edit code** → paste the latest [`worker.js`](worker.js) → **Deploy**.
+
+**Test it:** open your link with `?to=TestName`; pick a **free** time (it books + Telegrams
+you) and a **busy** time (it blocks and asks for another). If anything's misconfigured, the
+Worker sends a `⚠️` message to your Telegram with the exact error.
 
 The event lands on your `primary` calendar, titled from `evTitle` (e.g. `Date with <name> ❤️`,
 or just `Date ❤️` for a generic link).
